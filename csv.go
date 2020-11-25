@@ -30,7 +30,7 @@ var FailIfDoubleHeaderNames = false
 var ShouldAlignDuplicateHeadersWithStructFieldOrder = false
 
 // TagName defines key in the struct field's tag to scan
-var TagName = "csv"
+var TagName = "json"
 
 // TagSeparator defines seperator string for multiple csv tags in struct fields
 var TagSeparator = ","
