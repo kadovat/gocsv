@@ -73,10 +73,10 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool, fieldsFilter []
 		return err
 	}
 	inInnerStructInfo := getStructInfo(inInnerType) // Get the inner struct info to get CSV annotations
-	fieldsFilterMap := make(map[string]bool, 0)
+	fieldsFilterMap := make(map[string]int, 0)
 	if len(fieldsFilter) > 0 {
-		for _, field := range fieldsFilter {
-			fieldsFilterMap[field] = true
+		for idx, field := range fieldsFilter {
+			fieldsFilterMap[field] = idx
 		}
 	}
 
@@ -91,9 +91,12 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool, fieldsFilter []
 			if _, ok := fieldsFilterMap[fieldInfo.getFirstKey()]; !ok {
 				continue
 			}
+			idx = fieldsFilterMap[fieldInfo.getFirstKey()]
 		}
 		csvHeadersLabels[idx] = fieldInfo.getFirstKey()
-		idx++
+		if len(fieldsFilter) == 0 {
+			idx++
+		}
 	}
 	if !omitHeaders {
 		if err := writer.Write(csvHeadersLabels); err != nil {
@@ -108,6 +111,7 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool, fieldsFilter []
 				if _, ok := fieldsFilterMap[fieldInfo.getFirstKey()]; !ok {
 					continue
 				}
+				idxJ = fieldsFilterMap[fieldInfo.getFirstKey()]
 			}
 			csvHeadersLabels[idxJ] = ""
 			inInnerFieldValue, err := getInnerField(inValue.Index(i), inInnerWasPointer, fieldInfo.IndexChain) // Get the correct field header <-> position
@@ -115,7 +119,9 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool, fieldsFilter []
 				return err
 			}
 			csvHeadersLabels[idxJ] = inInnerFieldValue
-			idxJ++
+			if len(fieldsFilter) == 0 {
+				idxJ++
+			}
 		}
 		if err := writer.Write(csvHeadersLabels); err != nil {
 			return err
