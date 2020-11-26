@@ -79,14 +79,21 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool, fieldsFilter []
 			fieldsFilterMap[field] = true
 		}
 	}
-	csvHeadersLabels := make([]string, len(inInnerStructInfo.Fields))
-	for i, fieldInfo := range inInnerStructInfo.Fields { // Used to write the header (first line) in CSV
+
+	labelsLen := len(inInnerStructInfo.Fields)
+	if len(fieldsFilter) > 0 {
+		labelsLen = len(fieldsFilter)
+	}
+	csvHeadersLabels := make([]string, labelsLen)
+	idx := 0
+	for _, fieldInfo := range inInnerStructInfo.Fields { // Used to write the header (first line) in CSV
 		if len(fieldsFilter) > 0 {
 			if _, ok := fieldsFilterMap[fieldInfo.getFirstKey()]; !ok {
 				continue
 			}
 		}
-		csvHeadersLabels[i] = fieldInfo.getFirstKey()
+		csvHeadersLabels[idx] = fieldInfo.getFirstKey()
+		idx++
 	}
 	if !omitHeaders {
 		if err := writer.Write(csvHeadersLabels); err != nil {
@@ -95,18 +102,20 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool, fieldsFilter []
 	}
 	inLen := inValue.Len()
 	for i := 0; i < inLen; i++ { // Iterate over container rows
-		for j, fieldInfo := range inInnerStructInfo.Fields {
+		idxJ := 0
+		for _, fieldInfo := range inInnerStructInfo.Fields {
 			if len(fieldsFilter) > 0 {
 				if _, ok := fieldsFilterMap[fieldInfo.getFirstKey()]; !ok {
 					continue
 				}
 			}
-			csvHeadersLabels[j] = ""
+			csvHeadersLabels[idxJ] = ""
 			inInnerFieldValue, err := getInnerField(inValue.Index(i), inInnerWasPointer, fieldInfo.IndexChain) // Get the correct field header <-> position
 			if err != nil {
 				return err
 			}
-			csvHeadersLabels[j] = inInnerFieldValue
+			csvHeadersLabels[idxJ] = inInnerFieldValue
+			idxJ++
 		}
 		if err := writer.Write(csvHeadersLabels); err != nil {
 			return err
