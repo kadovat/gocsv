@@ -63,7 +63,7 @@ func writeFromChan(writer CSVWriter, c <-chan interface{}) error {
 	return writer.Error()
 }
 
-func writeTo(writer CSVWriter, in interface{}, omitHeaders bool) error {
+func writeTo(writer CSVWriter, in interface{}, omitHeaders bool, fieldsFilter []string) error {
 	inValue, inType := getConcreteReflectValueAndType(in) // Get the concrete type (not pointer) (Slice<?> or Array<?>)
 	if err := ensureInType(inType); err != nil {
 		return err
@@ -73,8 +73,19 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool) error {
 		return err
 	}
 	inInnerStructInfo := getStructInfo(inInnerType) // Get the inner struct info to get CSV annotations
+	fieldsFilterMap := make(map[string]bool, 0)
+	if len(fieldsFilter) > 0 {
+		for _, field := range fieldsFilter {
+			fieldsFilterMap[field] = true
+		}
+	}
 	csvHeadersLabels := make([]string, len(inInnerStructInfo.Fields))
 	for i, fieldInfo := range inInnerStructInfo.Fields { // Used to write the header (first line) in CSV
+		if len(fieldsFilter) > 0 {
+			if _, ok := fieldsFilterMap[fieldInfo.getFirstKey()]; !ok {
+				continue
+			}
+		}
 		csvHeadersLabels[i] = fieldInfo.getFirstKey()
 	}
 	if !omitHeaders {
@@ -85,6 +96,11 @@ func writeTo(writer CSVWriter, in interface{}, omitHeaders bool) error {
 	inLen := inValue.Len()
 	for i := 0; i < inLen; i++ { // Iterate over container rows
 		for j, fieldInfo := range inInnerStructInfo.Fields {
+			if len(fieldsFilter) > 0 {
+				if _, ok := fieldsFilterMap[fieldInfo.getFirstKey()]; !ok {
+					continue
+				}
+			}
 			csvHeadersLabels[j] = ""
 			inInnerFieldValue, err := getInnerField(inValue.Index(i), inInnerWasPointer, fieldInfo.IndexChain) // Get the correct field header <-> position
 			if err != nil {
